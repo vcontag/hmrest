@@ -36,6 +36,8 @@ Gegenstück: Home-Assistant-Integration im Repo `vcontag/hmrest-homeassistant` (
 - Werte aus der CCU nie ungeprüft an Clients geben – über die Paramset-Beschreibung normalisieren.
 - CCU-Seiten (`addon/hmrest/lib/*.sh`) laufen mit BusyBox-`sh`/`sed`: keine Bash-Erweiterungen.
 - Oberflächen- und Fehlertexte auf Deutsch.
+- README behält den Sicherheitshinweis (nur Heimnetz, Port 8099 nie ins Internet) und den Markenhinweis
+  (kein offizielles eQ-3-Produkt, HomeMatic ist Marke der eQ-3 AG).
 - Konfiguration und API-Key bleiben bei Updates erhalten (`update_script` überschreibt `config.json` nicht).
 
 ## Auf der CCU

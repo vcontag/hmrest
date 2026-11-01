@@ -7,8 +7,15 @@ BidCos-Wired und virtuellen Geräten sowie Systemvariablen, Programme, Räume un
 ## Installation
 1. `hmrest-<version>.tar.gz` (unter *Releases*) in der WebUI unter *Einstellungen → Systemsteuerung → Zusatzsoftware* hochladen und installieren.
 2. Firewall: *Einstellungen → Systemsteuerung → Firewall* → Port-Freigabe `8099`.
-3. API-Key auslesen: `cat /usr/local/addons/hmrest/etc/config.json` (wird beim ersten Start erzeugt).
-4. Oberfläche: `http://<CCU>:8099/`
+3. In der WebUI *Einstellungen → Systemsteuerung → HM-REST → Oberfläche öffnen* – dabei wird der API-Key erzeugt
+   und automatisch übernommen (im Reiter *API* sichtbar).
+
+## Sicherheit
+HM-REST ist für das **Heimnetz** gebaut: Es spricht unverschlüsseltes HTTP, erlaubt standardmäßig Zugriffe von jeder
+Webseite (CORS `*`) und überträgt den API-Key bei Live-Events in der Adresse.
+- **Port 8099 niemals aus dem Internet erreichbar machen** (keine Portfreigabe im Router).
+- Für den Zugriff von unterwegs ein VPN nutzen (z.B. WireGuard der FRITZ!Box).
+- Wer nur liest, kann in der `config.json` `"readOnly": true` setzen; `allowScript` nur bei Bedarf einschalten.
 
 ## Authentifizierung
 Header `X-API-Key: <key>` oder `Authorization: Bearer <key>` oder `?apikey=<key>`.
@@ -77,5 +84,8 @@ curl -X PUT -H "X-API-Key: KEY" -H "Content-Type: application/json" \
 ## Änderungen
 Siehe [CHANGELOG.md](CHANGELOG.md). Fertige Pakete gibt es unter *Releases*.
 
-## Lizenz
-[MIT](LICENSE)
+## Lizenz und Marken
+[MIT](LICENSE) – Nutzung ohne Gewährleistung und Haftung.
+
+Dieses Projekt ist kein offizielles Produkt der eQ-3 AG und steht in keiner Verbindung zu ihr.
+HomeMatic und Homematic IP sind eingetragene Marken der eQ-3 AG.
