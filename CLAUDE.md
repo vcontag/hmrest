@@ -41,6 +41,8 @@ Gegenstück: Home-Assistant-Integration im Repo `vcontag/hmrest-homeassistant` (
 ## Auf der CCU
 - Installiert unter `/usr/local/addons/hmrest`, Log `/var/log/hmrest.log`, Port 8099 (Firewall-Freigabe nötig)
 - Diagnose: *Einstellungen → Systemsteuerung → HM-REST → Diagnose* (Start/Stopp, Log, Ports, neuer API-Key)
+- Update-Anzeige: `rc.d/hmrest info` meldet `Update: /addons/hmrest/update-check.cgi`; `lib/update-check.sh` fragt
+  `api.github.com/repos/vcontag/hmrest/releases/latest` ab (1 h Cache in `/tmp`). Funktioniert nur bei öffentlichem Repo.
 
 ## Releases
 - Ein Release entsteht automatisch, wenn auf `main` eine Versionsnummer landet, für die es noch kein Release gibt
