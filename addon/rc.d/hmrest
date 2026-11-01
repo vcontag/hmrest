@@ -1,0 +1,88 @@
+#!/bin/sh
+# Start-/Stopp-Skript für das CCU-Add-on HM-REST
+
+ADDONNAME=hmrest
+ADDON_DIR=/usr/local/addons/${ADDONNAME}
+BIN=${ADDON_DIR}/bin/hmrest
+CONFIG=${ADDON_DIR}/etc/config.json
+PIDFILE=/var/run/${ADDONNAME}.pid
+LOGFILE=/var/log/${ADDONNAME}.log
+VERSION=$(cat ${ADDON_DIR}/VERSION 2>/dev/null)
+
+is_running() {
+  [ -f ${PIDFILE} ] && kill -0 "$(cat ${PIDFILE})" 2>/dev/null
+}
+
+do_start() {
+  if is_running; then echo "${ADDONNAME} läuft bereits"; return 0; fi
+  [ -f ${CONFIG} ] || cp ${ADDON_DIR}/etc/config.default.json ${CONFIG}
+  # Kachel in der Systemsteuerung sicherstellen
+  [ -x /bin/update_addon ] && [ -f ${ADDON_DIR}/etc/hm_addons.cfg ] && \
+    /bin/update_addon ${ADDONNAME} ${ADDON_DIR}/etc/hm_addons.cfg >/dev/null 2>&1
+  # stderr ins Log, damit auch Startfehler sichtbar sind
+  echo "$(date '+%Y/%m/%d %H:%M:%S') rc.d: starte ${BIN} ($(uname -m))" >> ${LOGFILE}
+  if [ ! -x ${BIN} ]; then
+    echo "$(date '+%Y/%m/%d %H:%M:%S') rc.d: ${BIN} fehlt oder ist nicht ausführbar" >> ${LOGFILE}
+    echo "${BIN} fehlt"; return 1
+  fi
+  SETSID=""
+  command -v setsid >/dev/null 2>&1 && SETSID=setsid
+  ${SETSID} ${BIN} -config ${CONFIG} -log ${LOGFILE} </dev/null >/dev/null 2>>${LOGFILE} &
+  echo $! > ${PIDFILE}
+  sleep 1
+  if is_running; then
+    echo "${ADDONNAME} gestartet"
+  else
+    echo "${ADDONNAME} konnte nicht gestartet werden – siehe ${LOGFILE}"
+    rm -f ${PIDFILE}
+    return 1
+  fi
+}
+
+do_stop() {
+  if is_running; then
+    kill "$(cat ${PIDFILE})"
+    i=0
+    while is_running && [ $i -lt 10 ]; do sleep 1; i=$((i+1)); done
+    is_running && kill -9 "$(cat ${PIDFILE})"
+  fi
+  rm -f ${PIDFILE}
+  echo "${ADDONNAME} gestoppt"
+}
+
+case "$1" in
+  ""|start)
+    do_start
+    ;;
+  stop)
+    do_stop
+    ;;
+  restart|reload)
+    do_stop
+    sleep 1
+    do_start
+    ;;
+  status)
+    if is_running; then echo "running"; else echo "stopped"; fi
+    ;;
+  info)
+    echo "Info: <b>HM-REST</b> – REST-API für alle Geräte, Parameter, Systemvariablen und Programme<br>"
+    echo "Info: Oberfläche über „Einstellen“ oder die Kachel in der Systemsteuerung (Port 8099)"
+    echo "Name: HM-REST"
+    echo "Version: ${VERSION}"
+    echo "Operations: uninstall restart"
+    echo "Config-Url: /addons/${ADDONNAME}/index.cgi"
+    ;;
+  uninstall)
+    do_stop
+    [ -x /bin/update_addon ] && /bin/update_addon ${ADDONNAME}
+    rm -f /usr/local/etc/config/addons/www/${ADDONNAME}
+    rm -rf ${ADDON_DIR}
+    rm -f /usr/local/etc/config/rc.d/${ADDONNAME}
+    ;;
+  *)
+    echo "Aufruf: $0 {start|stop|restart|status|info|uninstall}"
+    exit 1
+    ;;
+esac
+exit 0

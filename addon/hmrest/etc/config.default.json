@@ -1,0 +1,58 @@
+{
+  "listen": ":8099",
+  "apiKey": "",
+  "noAuth": false,
+  "cors": "*",
+  "readOnly": false,
+  "allowScript": false,
+  "disableEvents": false,
+  "callbackListen": "127.0.0.1:9126",
+  "callbackUrl": "http://127.0.0.1:9126",
+  "binCallbackListen": "127.0.0.1:9127",
+  "binCallbackUrl": "xmlrpc_bin://127.0.0.1:9127",
+  "reinitMinutes": 10,
+  "regaUrls": [
+    "http://127.0.0.1:8183/rega.exe",
+    "http://127.0.0.1:8181/rega.exe"
+  ],
+  "sessionUrls": [
+    "http://127.0.0.1/api/homematic.cgi",
+    "https://127.0.0.1/api/homematic.cgi"
+  ],
+  "interfaces": [
+    {
+      "name": "BidCos-RF",
+      "urls": [
+        "http://127.0.0.1:32001",
+        "http://127.0.0.1:2001"
+      ]
+    },
+    {
+      "name": "HmIP-RF",
+      "urls": [
+        "http://127.0.0.1:32010",
+        "http://127.0.0.1:2010"
+      ]
+    },
+    {
+      "name": "BidCos-Wired",
+      "urls": [
+        "http://127.0.0.1:32000",
+        "http://127.0.0.1:2000"
+      ]
+    },
+    {
+      "name": "VirtualDevices",
+      "urls": [
+        "http://127.0.0.1:39292/groups",
+        "http://127.0.0.1:9292/groups"
+      ]
+    },
+    {
+      "name": "CUxD",
+      "urls": [
+        "bin://127.0.0.1:8701"
+      ]
+    }
+  ]
+}

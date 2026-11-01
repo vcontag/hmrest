@@ -1,0 +1,75 @@
+#!/bin/sh
+# Installationsskript für das CCU-Add-on HM-REST
+# Wird von der CCU beim Hochladen des Add-ons aufgerufen ($1 = Plattform).
+
+ADDONNAME=hmrest
+CONFIG_DIR=/usr/local/etc/config
+ADDON_DIR=/usr/local/addons/${ADDONNAME}
+RCD_DIR=${CONFIG_DIR}/rc.d
+WWW_DIR=${CONFIG_DIR}/addons/www
+
+# /usr/local mounten, falls nötig (ältere Firmware)
+if ! mount | grep -q " /usr/local "; then
+  mount /usr/local 2>/dev/null
+fi
+
+# laufende Version stoppen
+[ -x ${RCD_DIR}/${ADDONNAME} ] && ${RCD_DIR}/${ADDONNAME} stop
+
+mkdir -p ${ADDON_DIR}/bin ${ADDON_DIR}/etc ${ADDON_DIR}/www ${ADDON_DIR}/lib ${RCD_DIR} ${WWW_DIR}
+chmod 755 ${ADDON_DIR}
+
+# Bevorzugte Reihenfolge nach Architektur, dann alle übrigen probieren
+case "$(uname -m)" in
+  aarch64|arm64) ORDER="arm64 arm amd64 386" ;;
+  x86_64|amd64)  ORDER="amd64 386 arm64 arm" ;;
+  i386|i686)     ORDER="386 amd64 arm arm64" ;;
+  *)             ORDER="arm arm64 amd64 386" ;;
+esac
+
+# Das erste Programm nehmen, das auf diesem System tatsächlich läuft
+rm -f ${ADDON_DIR}/bin/hmrest ${ADDON_DIR}/bin/hmrest.try
+FOUND=""
+for a in ${ORDER}; do
+  [ -f bin/hmrest-${a} ] || continue
+  cp -f bin/hmrest-${a} ${ADDON_DIR}/bin/hmrest.try
+  chmod 755 ${ADDON_DIR}/bin/hmrest.try
+  if ${ADDON_DIR}/bin/hmrest.try -version >/dev/null 2>&1; then
+    mv -f ${ADDON_DIR}/bin/hmrest.try ${ADDON_DIR}/bin/hmrest
+    FOUND=${a}
+    break
+  fi
+done
+rm -f ${ADDON_DIR}/bin/hmrest.try
+if [ -z "${FOUND}" ]; then
+  echo "Kein lauffähiges Programm für $(uname -m) gefunden"
+  exit 1
+fi
+echo "${FOUND}" > ${ADDON_DIR}/ARCH
+
+cp -f VERSION ${ADDON_DIR}/VERSION
+# alte Dateien aus dem Web-Ordner entfernen (Skripte liegen jetzt in lib/)
+rm -f ${ADDON_DIR}/www/diagnose.sh
+cp -af hmrest/www/* ${ADDON_DIR}/www/
+cp -af hmrest/lib/* ${ADDON_DIR}/lib/
+chmod 755 ${ADDON_DIR}/www/*.cgi ${ADDON_DIR}/lib/*.sh
+cp -f hmrest/etc/config.default.json ${ADDON_DIR}/etc/config.default.json
+cp -f hmrest/etc/hm_addons.cfg ${ADDON_DIR}/etc/hm_addons.cfg
+# vorhandene Konfiguration (inkl. API-Key) bleibt bei Updates erhalten
+[ -f ${ADDON_DIR}/etc/config.json ] || cp hmrest/etc/config.default.json ${ADDON_DIR}/etc/config.json
+
+cp -f rc.d/${ADDONNAME} ${RCD_DIR}/${ADDONNAME}
+chmod 755 ${RCD_DIR}/${ADDONNAME}
+
+# Link für die Einstellungsseite in der WebUI
+ln -sfn ${ADDON_DIR}/www ${WWW_DIR}/${ADDONNAME}
+
+# Kachel unter Einstellungen -> Systemsteuerung
+if [ -x /bin/update_addon ]; then
+  /bin/update_addon ${ADDONNAME} ${ADDON_DIR}/etc/hm_addons.cfg
+fi
+
+sync
+# gleich starten (falls die CCU nach der Installation nicht neu startet)
+${RCD_DIR}/${ADDONNAME} start
+exit 0

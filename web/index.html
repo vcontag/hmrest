@@ -1,0 +1,587 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1b2a3a">
+<title>HM-REST</title>
+<style>
+:root{--bg:#f3f5f8;--card:#fff;--fg:#1b2430;--mut:#6b7684;--line:#e2e6ec;--acc:#1f6feb;--ok:#1a7f37;--bad:#cf222e;--chip:#eef2f7}
+@media (prefers-color-scheme:dark){:root{--bg:#0f141a;--card:#18202a;--fg:#e6edf3;--mut:#8b96a3;--line:#283341;--acc:#4c8dff;--ok:#3fb950;--bad:#f85149;--chip:#222c38}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+header{position:sticky;top:0;z-index:5;background:#1b2a3a;color:#fff;padding:10px 16px 0}
+header h1{font-size:17px;margin:0 0 8px;display:flex;justify-content:space-between;align-items:center}
+header h1 small{font-weight:400;opacity:.7;font-size:12px}
+nav{display:flex;gap:4px;overflow-x:auto}
+nav button{background:none;border:0;color:#cdd6e0;padding:8px 12px;font-size:14px;border-bottom:3px solid transparent;white-space:nowrap}
+nav button.on{color:#fff;border-color:var(--acc)}
+main{padding:12px 16px 40px;max-width:900px;margin:0 auto}
+input,select,button{font:inherit}
+input[type=text],input[type=search],input[type=number],input[type=password],select{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--fg)}
+.btn{background:var(--acc);color:#fff;border:0;border-radius:8px;padding:8px 14px;cursor:pointer}
+.btn.sec{background:var(--chip);color:var(--fg)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;margin:10px 0;overflow:hidden}
+.row{display:flex;align-items:center;gap:10px;padding:10px 12px;border-top:1px solid var(--line)}
+.row:first-child{border-top:0}
+.grow{flex:1;min-width:0}
+.t{font-weight:600;overflow:hidden;text-overflow:ellipsis}
+.s{color:var(--mut);font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chip{display:inline-block;background:var(--chip);border-radius:20px;padding:1px 8px;font-size:12px;margin:2px 2px 0 0}
+.dev{cursor:pointer}
+.ch h3{margin:0;padding:10px 12px;font-size:14px;background:var(--chip)}
+.val{font-variant-numeric:tabular-nums;white-space:nowrap}
+.ctl{display:flex;gap:6px;align-items:center}
+.ctl input[type=number]{width:96px}
+.ctl select{width:auto;max-width:160px}
+.sw{position:relative;width:46px;height:26px;flex:none}
+.sw input{opacity:0;width:0;height:0}
+.sw span{position:absolute;inset:0;background:var(--line);border-radius:26px;transition:.15s}
+.sw span:before{content:"";position:absolute;width:20px;height:20px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.15s}
+.sw input:checked+span{background:var(--ok)}
+.sw input:checked+span:before{transform:translateX(20px)}
+.flash{animation:fl 1s}
+@keyframes fl{from{background:rgba(31,111,235,.25)}to{background:transparent}}
+.err{color:var(--bad)}
+.hide{display:none}
+pre{white-space:pre-wrap;word-break:break-all;font-size:12px;background:var(--chip);padding:10px;border-radius:8px}
+.wpbar{display:flex;height:26px;border-radius:6px;overflow:hidden;flex:1;min-width:0;cursor:pointer;border:2px solid transparent}
+.wpbar.sel{border-color:var(--acc)}
+.wpbar div{display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff;overflow:hidden;white-space:nowrap;text-shadow:0 0 2px rgba(0,0,0,.6)}
+.wpday{width:26px;font-weight:600;font-size:13px;flex:none}
+.wpaxis{display:flex;justify-content:space-between;font-size:10px;color:var(--mut);margin:0 0 0 36px}
+.wpslot{gap:6px!important;padding:8px 10px!important}
+.wpslot input[type=time]{width:114px;padding:7px 6px}
+.wpslot input[type=number]{width:66px;padding:7px 6px}
+.wpslot .from{width:46px;flex:none;color:var(--mut);font-size:12.5px}
+.wpslot .sw2{width:6px;align-self:stretch;border-radius:3px;flex:none}
+.chipbtn{background:var(--chip);border:1px solid var(--line);color:var(--fg);border-radius:16px;padding:5px 11px;font-size:13px;cursor:pointer}
+.chipbtn.on{background:var(--acc);border-color:var(--acc);color:#fff}
+.wpsave{position:sticky;bottom:0;z-index:4;display:flex;gap:8px;justify-content:flex-end;margin:10px -16px 0;padding:10px 16px calc(10px + env(safe-area-inset-bottom));background:var(--bg);border-top:1px solid var(--line)}
+.dirty{color:#bf8700;font-weight:600}
+#toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:#222;color:#fff;padding:8px 14px;border-radius:8px;opacity:0;transition:.2s;pointer-events:none;max-width:90%}
+#toast.on{opacity:.95}
+.bar{display:flex;gap:8px;margin:6px 0}
+</style>
+</head>
+<body>
+<header>
+  <h1>HM-REST <small id="ver"></small></h1>
+  <nav id="nav">
+    <button data-tab="devices" class="on">Geräte</button>
+    <button data-tab="sysvars">Systemvariablen</button>
+    <button data-tab="programs">Programme</button>
+    <button data-tab="live">Live</button>
+    <button data-tab="settings">API</button>
+  </nav>
+</header>
+<main>
+  <section id="setup" class="hide">
+    <div class="card"><div class="row"><div class="grow">
+      <div class="t">Anmeldung über die CCU erforderlich</div>
+      <div class="s" style="white-space:normal">Der API-Key wird nur an angemeldete Benutzer der CCU vergeben.
+        Melde dich in der WebUI an und öffne <b>Einstellungen → Systemsteuerung → HM-REST → Oberfläche öffnen</b>.
+        Du wirst dann automatisch angemeldet.</div>
+      <div class="bar"><a class="btn" id="ccuLogin" href="/">Zur CCU-Anmeldung</a></div>
+    </div></div></div>
+  </section>
+
+  <section id="login" class="hide">
+    <div class="card"><div class="row"><div class="grow">
+      <div class="t">API-Key eingeben</div>
+      <div class="s" style="white-space:normal">Oder bequemer: in der CCU-WebUI unter <b>Systemsteuerung → HM-REST → Oberfläche öffnen</b> – dann wird der Key automatisch übernommen.</div>
+      <div class="bar"><input id="key" type="password" autocomplete="off"><button class="btn" id="keyok">OK</button></div>
+      <a class="btn sec" id="ccuLogin2" href="/">Zur CCU-Anmeldung</a>
+    </div></div></div>
+  </section>
+
+  <section id="devices">
+    <div class="bar"><input id="q" type="search" placeholder="Suchen (Name, Adresse, Typ, Raum)"><button class="btn sec" id="reload">↻</button></div>
+    <div id="devlist"></div>
+  </section>
+
+  <section id="detail" class="hide">
+    <div class="bar"><button class="btn sec" id="back">← Zurück</button><button class="btn sec" id="master">MASTER anzeigen</button></div>
+    <div id="detbody"></div>
+  </section>
+
+  <section id="wp" class="hide">
+    <div class="bar"><button class="btn sec" id="wpback">← Zurück</button></div>
+    <div id="wpbody"></div>
+  </section>
+
+  <section id="sysvars" class="hide"><div id="svlist"></div></section>
+  <section id="programs" class="hide"><div id="prlist"></div></section>
+  <section id="live" class="hide">
+    <div class="bar"><input id="lq" type="search" placeholder="Filter (Adresse oder Parameter)"><button class="btn sec" id="lclear">Leeren</button></div>
+    <div class="card" id="livelist"></div>
+  </section>
+  <section id="settings" class="hide">
+    <div class="card"><div class="row"><div class="grow" id="info">…</div></div></div>
+    <div class="card"><div class="row"><div class="grow">
+      <div class="t">API-Key</div>
+      <div class="bar"><input id="showkey" type="password" readonly><button class="btn sec" id="eye">👁</button><button class="btn sec" id="copykey">Kopieren</button></div>
+      <button class="btn sec" id="newkey">Neuen API-Key erzeugen</button>
+      <div class="s" style="white-space:normal;margin-top:6px">Ein neuer Key macht den alten sofort ungültig – andere Geräte und Skripte müssen dann angepasst werden.</div>
+    </div></div></div>
+    <div class="card"><div class="row"><div class="grow">
+      <div class="t">Beispiele</div>
+      <pre id="examples"></pre>
+      <button class="btn sec" id="logout">API-Key vergessen</button>
+    </div></div></div>
+  </section>
+</main>
+<div id="toast"></div>
+<script>
+const $ = s => document.querySelector(s);
+let KEY = localStorage.getItem('hmrest-key') || '';
+let devices = [], current = null, es = null;
+
+function toast(t){const e=$('#toast');e.textContent=t;e.classList.add('on');clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove('on'),2200)}
+async function api(path, opt={}){
+  opt.headers = Object.assign({'X-API-Key':KEY,'Content-Type':'application/json'}, opt.headers||{});
+  const r = await fetch(path, opt);
+  const j = await r.json().catch(()=>({}));
+  if (r.status===401){ if (j.setup) $('#setup').classList.remove('hide'); else showLogin(); throw new Error(j.error||'API-Key fehlt'); }
+  if (!r.ok) throw new Error(j.error || ('HTTP '+r.status));
+  return j;
+}
+function el(tag, attrs={}, ...kids){
+  const e=document.createElement(tag);
+  for (const [k,v] of Object.entries(attrs)) { if (k==='class') e.className=v; else if (k.startsWith('on')) e.addEventListener(k.slice(2),v); else e.setAttribute(k,v); }
+  for (const k of kids.flat()) if (k!=null) e.append(k.nodeType?k:document.createTextNode(k));
+  return e;
+}
+function showLogin(){ $('#login').classList.remove('hide'); }
+function setKey(k){
+  KEY=k; try{ localStorage.setItem('hmrest-key',KEY); }catch(e){}
+  $('#showkey').value=KEY; $('#key').value=KEY;
+}
+// Key eintragen, speichern und sofort verwenden (Daten + Live-Events neu laden)
+async function applyKey(k, msg){
+  setKey(k);
+  $('#setup').classList.add('hide'); $('#login').classList.add('hide');
+  await init();
+  tab('settings'); $('#showkey').type='text';
+  if (msg) toast(msg);
+}
+$('#keyok').onclick=()=>applyKey($('#key').value.trim(),'API-Key übernommen');
+$('#key').onkeydown=e=>{ if (e.key==='Enter') $('#keyok').click(); };
+$('#logout').onclick=()=>{localStorage.removeItem('hmrest-key');location.reload()};
+async function genKey(renew){
+  const r = await fetch('/setup/apikey',{method:'POST',headers:renew?{'X-API-Key':KEY}:{}});
+  const j = await r.json().catch(()=>({}));
+  if (!r.ok) throw new Error(j.error||('HTTP '+r.status));
+  return j.apiKey;
+}
+// Key mit der WebUI-Sitzung abholen (wird beim ersten Mal erzeugt)
+async function keyFromSession(sid){
+  const r = await fetch('/setup/apikey',{headers:{'X-HM-Session':sid},cache:'no-store'});
+  const j = await r.json().catch(()=>({}));
+  if (!r.ok) throw new Error(j.error||('HTTP '+r.status));
+  return j.apiKey;
+}
+// Links zur CCU-Anmeldung auf den Rechner zeigen lassen, auf dem das Add-on läuft
+['#ccuLogin','#ccuLogin2'].forEach(s=>$(s).href='http://'+location.hostname+'/');
+$('#newkey').onclick=async()=>{
+  if (!confirm('Neuen API-Key erzeugen? Der alte wird sofort ungültig.')) return;
+  try{ await applyKey(await genKey(true),'Neuer API-Key erzeugt und übernommen'); }
+  catch(e){ toast('Fehler: '+e.message); }
+};
+$('#eye').onclick=()=>{const i=$('#showkey');i.type=i.type==='password'?'text':'password'};
+$('#copykey').onclick=async()=>{
+  try{ await navigator.clipboard.writeText(KEY); toast('Kopiert'); }
+  catch(e){ const i=$('#showkey'); i.type='text'; i.select(); document.execCommand('copy'); toast('Kopiert'); }
+};
+
+function tab(name){
+  document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.tab===name));
+  ['devices','detail','wp','sysvars','programs','live','settings'].forEach(id=>$('#'+id).classList.toggle('hide',id!==name));
+  if (name==='sysvars') loadSysvars();
+  if (name==='programs') loadPrograms();
+  if (name==='settings') loadInfo();
+}
+document.querySelectorAll('#nav button').forEach(b=>b.onclick=()=>tab(b.dataset.tab));
+
+// ---------- Geräte ----------
+async function loadDevices(refresh){
+  $('#devlist').textContent='Lade …';
+  try { devices = await api('/api/devices'+(refresh?'?refresh=1':'')); renderDevices(); }
+  catch(e){ $('#devlist').innerHTML=''; $('#devlist').append(el('div',{class:'err'},e.message)); }
+}
+function renderDevices(){
+  const q=$('#q').value.toLowerCase(), box=$('#devlist'); box.innerHTML='';
+  const groups={};
+  for (const d of devices){
+    const rooms=[...new Set(d.channels.flatMap(c=>c.rooms||[]))];
+    const hay=[d.name,d.address,d.type,d.interface,...rooms,...d.channels.map(c=>c.name)].join(' ').toLowerCase();
+    if (q && !hay.includes(q)) continue;
+    (groups[d.interface]=groups[d.interface]||[]).push([d,rooms]);
+  }
+  for (const [iface,list] of Object.entries(groups)){
+    const card=el('div',{class:'card'});
+    card.append(el('div',{class:'row'},el('div',{class:'s'},iface+' · '+list.length+' Geräte')));
+    for (const [d,rooms] of list){
+      card.append(el('div',{class:'row dev',onclick:()=>openDevice(d.address)},
+        el('div',{class:'grow'},el('div',{class:'t'},d.name||d.address),
+          el('div',{class:'s'},d.type+' · '+d.address), el('div',{},rooms.map(r=>el('span',{class:'chip'},r)))),
+        el('div',{class:'s'},'›')));
+    }
+    box.append(card);
+  }
+  if (!box.children.length) box.textContent='Keine Geräte gefunden.';
+}
+$('#q').oninput=renderDevices;
+$('#reload').onclick=()=>loadDevices(true);
+$('#back').onclick=()=>{current=null;tab('devices')};
+
+async function openDevice(addr, master){
+  current=addr; tab('detail'); $('#nav button.on')?.classList.remove('on');
+  $('#detbody').textContent='Lade …';
+  try{
+    const d = await api('/api/devices/'+encodeURIComponent(addr)+'?values=full'+(master?'&paramsets=MASTER':''));
+    renderDetail(d, master);
+  }catch(e){$('#detbody').innerHTML='';$('#detbody').append(el('div',{class:'err'},e.message))}
+}
+$('#master').onclick=()=>current&&openDevice(current,true);
+
+function fmt(m){
+  let v=m.value; if (v===undefined) return '–';
+  if (m.type==='BOOL'||m.type==='ACTION') return v?'an / true':'aus / false';
+  if (m.type==='ENUM' && Array.isArray(m.valueList)) return m.valueList[v-(+m.min||0)]??v;
+  if (typeof v==='number'){
+    if (m.unit==='100%') return Math.round(v*1000)/10+' %';
+    v=Math.round(v*1000)/1000;
+  }
+  return v+(m.unit?' '+m.unit.replace(/&#176;|°/,'°'):'');
+}
+
+function control(addr, name, m, key){
+  if (!m.writable) return null;
+  const send = async (val)=>{
+    try{
+      const path = key==='VALUES' ? `/api/devices/${encodeURIComponent(addr)}/values/${encodeURIComponent(name)}`
+                                  : `/api/devices/${encodeURIComponent(addr)}/paramsets/${key}`;
+      const body = key==='VALUES' ? {value:val} : {[name]:val};
+      await api(path,{method:'PUT',body:JSON.stringify(body)});
+      toast(name+' = '+JSON.stringify(val));
+    }catch(e){toast('Fehler: '+e.message)}
+  };
+  if (m.type==='ACTION') return el('button',{class:'btn',onclick:()=>send(true)},'Auslösen');
+  if (m.type==='BOOL'){ const i=el('input',{type:'checkbox'}); i.checked=!!m.value; i.onchange=()=>send(i.checked); return el('label',{class:'sw'},i,el('span')); }
+  if (m.type==='ENUM' && Array.isArray(m.valueList)){
+    const s=el('select'); m.valueList.forEach((t,i)=>{const o=el('option',{value:i+(+m.min||0)},t);if(i+(+m.min||0)==m.value)o.selected=true;s.append(o)});
+    s.onchange=()=>send(+s.value); return s;
+  }
+  if (m.type==='FLOAT'||m.type==='INTEGER'){
+    const pct = m.unit==='100%';
+    const i=el('input',{type:'number',step:m.type==='INTEGER'?'1':(pct?'1':'0.1')});
+    if (typeof m.value==='number') i.value = pct? Math.round(m.value*100) : m.value;
+    const go=()=>{let v=parseFloat(i.value); if(isNaN(v))return; send(pct? v/100 : v)};
+    i.onkeydown=e=>{if(e.key==='Enter')go()};
+    return el('div',{class:'ctl'},i,pct?'%':'',el('button',{class:'btn',onclick:go},'Setzen'));
+  }
+  const i=el('input',{type:'text',value:m.value??''});
+  return el('div',{class:'ctl'},i,el('button',{class:'btn',onclick:()=>send(i.value)},'Setzen'));
+}
+
+function paramRows(addr, set, key){
+  const card=el('div',{});
+  const names=Object.keys(set).sort();
+  for (const n of names){
+    const m=set[n]; if (!m.readable && !m.writable) continue;
+    const row=el('div',{class:'row','data-a':addr.toUpperCase(),'data-p':n},
+      el('div',{class:'grow'},el('div',{class:'t'},n),el('div',{class:'s'},m.type+(m.writable?' · schreibbar':''))),
+      m.type==='ACTION'?null:el('div',{class:'val'},fmt(m)), control(addr,n,m,key));
+    row._m=m; card.append(row);
+  }
+  return card;
+}
+
+function renderDetail(d, master){
+  const b=$('#detbody'); b.innerHTML='';
+  b.append(el('div',{class:'card'},el('div',{class:'row'},el('div',{class:'grow'},
+    el('div',{class:'t'},d.name||d.address), el('div',{class:'s'},`${d.type} · ${d.address} · ${d.interface}`+(d.firmware?' · FW '+d.firmware:''))))));
+  if ((d.channels||[]).some(c=>/CLIMATE|THERMALCONTROL|HEATING/i.test(c.type||''))){
+    b.append(el('div',{class:'card'},el('div',{class:'row'},el('div',{class:'grow'},el('div',{class:'t'},'Wochenprogramm'),
+      el('div',{class:'s'},'Heizzeiten und Temperaturen je Wochentag')),
+      el('button',{class:'btn',onclick:()=>openWP(d.address)},'Bearbeiten'))));
+  }
+  if (master && d.master){ const c=el('div',{class:'card ch'},el('h3',{},'Gerät · MASTER')); c.append(paramRows(d.address,d.master,'MASTER')); b.append(c); }
+  for (const ch of d.channels||[]){
+    if (!ch.values && !ch.master && !ch.errors) continue;
+    const c=el('div',{class:'card ch'},el('h3',{},`${ch.index}: ${ch.name||ch.address} · ${ch.type}`));
+    if (ch.errors) c.append(el('div',{class:'row err'},Object.values(ch.errors).join('; ')));
+    if (ch.values) c.append(paramRows(ch.address,ch.values,'VALUES'));
+    if (master && ch.master){ c.append(el('div',{class:'row s'},'MASTER (Konfiguration)')); c.append(paramRows(ch.address,ch.master,'MASTER')); }
+    b.append(c);
+  }
+}
+
+// ---------- Wochenprogramm ----------
+const WD=['MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY','SATURDAY','SUNDAY'];
+const WDS={MONDAY:'Mo',TUESDAY:'Di',WEDNESDAY:'Mi',THURSDAY:'Do',FRIDAY:'Fr',SATURDAY:'Sa',SUNDAY:'So'};
+const WDL={MONDAY:'Montag',TUESDAY:'Dienstag',WEDNESDAY:'Mittwoch',THURSDAY:'Donnerstag',FRIDAY:'Freitag',SATURDAY:'Samstag',SUNDAY:'Sonntag'};
+let WP=null;
+const toMin=s=>{const [h,m]=String(s).split(':').map(Number);return h*60+m};
+const toHM=m=>String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0');
+function tempColor(t){ // ≤15 °C blau … ≥23 °C orange – Absenk- und Komforttemperatur klar unterscheidbar
+  const x=Math.max(0,Math.min(1,(t-15)/8)), a=[59,130,196], b=[232,119,46];
+  return `rgb(${a.map((v,i)=>Math.round(v+(b[i]-v)*x)).join(',')})`;
+}
+$('#wpback').onclick=()=>{ if (WP&&WP.dirty.size&&!confirm('Ungespeicherte Änderungen verwerfen?')) return; WP=null; openDevice(current); };
+
+async function openWP(addr){
+  tab('wp'); $('#nav button.on')?.classList.remove('on');
+  $('#wpbody').textContent='Lade Wochenprogramm …';
+  try{
+    const info=await api('/api/devices/'+encodeURIComponent(addr)+'/weekprogram');
+    const prog=JSON.parse(JSON.stringify(info.program));
+    const p=String(info.activeProfile||info.profiles[0]);
+    WP={addr,info,prog,profile:p,day:'MONDAY',dirty:new Set(),activate:null,err:''};
+    renderWP();
+  }catch(e){ $('#wpbody').innerHTML=''; $('#wpbody').append(el('div',{class:'err'},e.message)); }
+}
+
+function dayBar(day){
+  const slots=WP.prog[WP.profile][day]||[]; let from=0;
+  const bar=el('div',{class:'wpbar'+(WP.day===day?' sel':''),onclick:()=>{WP.day=day;renderWP()}});
+  for (const s of slots){
+    const end=toMin(s.end), w=(end-from)/1440*100;
+    if (w>0) bar.append(el('div',{style:`width:${w}%;background:${tempColor(s.temp)}`,title:`${toHM(from)}–${s.end}: ${s.temp} °C`}, w>7?String(s.temp):''));
+    from=end;
+  }
+  return bar;
+}
+
+function validateDay(slots){
+  let prev=0;
+  for (let i=0;i<slots.length;i++){
+    const e=toMin(slots[i].end);
+    if (isNaN(e)) return `Abschnitt ${i+1}: Uhrzeit fehlt`;
+    if (e%5) return `Abschnitt ${i+1}: Uhrzeit muss auf 5 Minuten enden`;
+    if (e<=prev) return `Abschnitt ${i+1}: Uhrzeiten müssen aufsteigend sein`;
+    const t=+slots[i].temp;
+    if (isNaN(t)||t<WP.info.minTemp||t>WP.info.maxTemp) return `Abschnitt ${i+1}: Temperatur ${WP.info.minTemp}–${WP.info.maxTemp} °C`;
+    prev=e;
+  }
+  return prev===1440?'':'Der letzte Abschnitt muss um 24:00 enden';
+}
+
+function touch(day){ WP.dirty.add(WP.profile+'|'+day); }
+
+function copyTo(days){
+  const src=JSON.stringify(WP.prog[WP.profile][WP.day]);
+  for (const d of days){ if (d===WP.day) continue; WP.prog[WP.profile][d]=JSON.parse(src); touch(d); }
+  toast(WDL[WP.day]+' kopiert'); renderWP();
+}
+
+function renderWP(){
+  const b=$('#wpbody'); b.innerHTML=''; const info=WP.info;
+  b.append(el('div',{class:'card'},el('div',{class:'row'},el('div',{class:'grow'},
+    el('div',{class:'t'},'Wochenprogramm · '+(info.name||info.device)),
+    el('div',{class:'s'},`${info.type} · ${info.address}`)))));
+
+  // Profile
+  if (info.profiles.length>1){
+    const row=el('div',{class:'bar',style:'flex-wrap:wrap;align-items:center'});
+    for (const p of info.profiles){
+      const ps=String(p), d=[...WP.dirty].some(k=>k.startsWith(ps+'|'));
+      row.append(el('button',{class:'chipbtn'+(WP.profile===ps?' on':''),onclick:()=>{WP.profile=ps;renderWP()}},
+        'Profil '+p+(info.activeProfile===p?' ★':'')+(WP.activate===ps?' → ★':'')+(d?' •':'')));
+    }
+    const isActive=String(info.activeProfile)===WP.profile;
+    const cb=el('input',{type:'checkbox'}); cb.checked=isActive||WP.activate===WP.profile;
+    cb.disabled=isActive;
+    cb.onchange=()=>{WP.activate=cb.checked?WP.profile:null; renderWP()};
+    row.append(el('label',{class:'s',style:'display:flex;gap:6px;align-items:center;margin-left:auto'},cb,'aktives Profil'));
+    b.append(el('div',{class:'card'},el('div',{class:'row'},el('div',{class:'grow'},row,
+      el('div',{class:'s'},'★ = vom Thermostat gerade genutzt')))));
+  }
+
+  // Wochenübersicht
+  const wk=el('div',{class:'card'});
+  for (const d of WD){
+    wk.append(el('div',{class:'row',style:'gap:8px;padding:6px 10px'},
+      el('div',{class:'wpday'+([...WP.dirty].includes(WP.profile+'|'+d)?' dirty':'')},WDS[d]), dayBar(d)));
+  }
+  wk.append(el('div',{class:'wpaxis',style:'padding:0 10px 8px'},...['0','6','12','18','24'].map(x=>el('span',{},x))));
+  b.append(wk);
+
+  // Tageseditor
+  const slots=WP.prog[WP.profile][WP.day];
+  const ed=el('div',{class:'card ch'},el('h3',{},WDL[WP.day]+(info.profiles.length>1?' · Profil '+WP.profile:'')));
+  let from=0;
+  slots.forEach((s,i)=>{
+    const last=i===slots.length-1;
+    const endEl= last ? el('span',{class:'val',style:'width:104px;display:inline-block;padding-left:7px;width:114px'},'24:00')
+                      : el('input',{type:'time',step:'300',value:s.end});
+    if (!last) endEl.onchange=()=>{ s.end=endEl.value; touch(WP.day); renderWP(); };
+    const tEl=el('input',{type:'number',step:'0.5',min:info.minTemp,max:info.maxTemp,value:s.temp});
+    tEl.onchange=()=>{ s.temp=Math.round(parseFloat(tEl.value)*2)/2; touch(WP.day); renderWP(); };
+    const del=el('button',{class:'btn sec',title:'Abschnitt entfernen',onclick:()=>{
+      if (last){ slots[i-1].end='24:00'; } // vorletzter wird zum letzten
+      slots.splice(i,1); touch(WP.day); renderWP(); }},'✕');
+    if (slots.length===1) del.disabled=true;
+    ed.append(el('div',{class:'row wpslot'},
+      el('span',{class:'sw2',style:'background:'+tempColor(+s.temp)}),
+      el('span',{class:'from'},toHM(from)+' –'), endEl, tEl, el('span',{},'°C'),
+      el('span',{class:'grow'}), del));
+    from=toMin(s.end);
+  });
+  const err=validateDay(slots);
+  if (err) ed.append(el('div',{class:'row err'},err));
+  const add=el('button',{class:'btn sec',onclick:()=>{
+    if (slots.length>=info.slots){ toast('Höchstens '+info.slots+' Abschnitte pro Tag'); return; }
+    const lastS=slots[slots.length-1], start=slots.length>1?toMin(slots[slots.length-2].end):0;
+    const mid=Math.round((start+(1440-start)/2)/5)*5;
+    if (mid<=start||mid>=1440){ toast('Kein Platz für einen weiteren Abschnitt'); return; }
+    slots.splice(slots.length-1,0,{end:toHM(mid),temp:lastS.temp}); touch(WP.day); renderWP(); }},'+ Abschnitt');
+  ed.append(el('div',{class:'row',style:'flex-wrap:wrap;gap:6px'},add,el('span',{class:'grow'}),
+    el('span',{class:'s'},'Kopieren nach:'),
+    el('button',{class:'chipbtn',onclick:()=>copyTo(WD.slice(0,5))},'Mo–Fr'),
+    el('button',{class:'chipbtn',onclick:()=>copyTo(WD.slice(5))},'Sa–So'),
+    el('button',{class:'chipbtn',onclick:()=>copyTo(WD)},'Alle')));
+  const single=el('div',{class:'row',style:'flex-wrap:wrap;gap:6px'},el('span',{class:'s'},'… oder einzeln:'));
+  for (const d of WD) if (d!==WP.day) single.append(el('button',{class:'chipbtn',onclick:()=>copyTo([d])},WDS[d]));
+  ed.append(single);
+  b.append(ed);
+
+  // Speichern
+  const n=WP.dirty.size+(WP.activate?1:0);
+  const anyErr=[...WP.dirty].some(k=>{const [p,d]=k.split('|');return validateDay(WP.prog[p][d])});
+  const save=el('button',{class:'btn',onclick:saveWP},n?`Speichern (${[WP.dirty.size?WP.dirty.size+(WP.dirty.size===1?' Tag':' Tage'):'',WP.activate?'Profil '+WP.activate+' aktiv':''].filter(Boolean).join(' + ')})`:'Keine Änderungen');
+  save.disabled=!n||anyErr;
+  const reset=el('button',{class:'btn sec',onclick:()=>openWP(WP.addr)},'Verwerfen'); reset.disabled=!n;
+  b.append(el('div',{class:'s',style:'margin-top:8px;white-space:normal'},'Batteriebetriebene Thermostate übernehmen Änderungen erst beim nächsten Funkkontakt, das kann einige Minuten dauern.'));
+  b.append(el('div',{class:'wpsave'},reset,save));
+}
+
+async function saveWP(){
+  // nach Profil gruppieren; je Profil ein Aufruf (= eine Funkübertragung)
+  const byP={};
+  for (const k of WP.dirty){ const [p,d]=k.split('|'); (byP[p]=byP[p]||{})[d]=WP.prog[p][d]; }
+  if (WP.activate && !byP[WP.activate]) byP[WP.activate]={};
+  try{
+    for (const [p,days] of Object.entries(byP)){
+      const body={profile:+p,days};
+      if (WP.activate===p) body.activeProfile=+p;
+      await api('/api/devices/'+encodeURIComponent(WP.addr)+'/weekprogram',{method:'PUT',body:JSON.stringify(body)});
+    }
+    toast('Gespeichert – wird an das Thermostat übertragen');
+    const keepDay=WP.day, keepP=WP.profile; await openWP(WP.addr); WP.day=keepDay; WP.profile=keepP; renderWP();
+  }catch(e){ toast('Fehler: '+e.message); }
+}
+
+// ---------- Systemvariablen ----------
+async function loadSysvars(){
+  const box=$('#svlist'); box.textContent='Lade …';
+  try{
+    const list=await api('/api/sysvars'); box.innerHTML='';
+    const card=el('div',{class:'card'});
+    for (const v of list){
+      let ctl, show=v.value;
+      const send=async val=>{try{await api('/api/sysvars/'+v.id,{method:'PUT',body:JSON.stringify({value:val})});toast(v.name+' gesetzt');loadSysvars()}catch(e){toast('Fehler: '+e.message)}};
+      if (v.type==='bool'||v.type==='alarm'){ const i=el('input',{type:'checkbox'}); i.checked=v.value; i.onchange=()=>send(i.checked); ctl=el('label',{class:'sw'},i,el('span')); show=v.value?(v.name1||'wahr'):(v.name0||'falsch'); }
+      else if (v.type==='enum'){ const s=el('select'); (v.valueList||[]).forEach((t,i)=>{const o=el('option',{value:i},t);if(i==v.value)o.selected=true;s.append(o)}); s.onchange=()=>send(+s.value); ctl=s; show=(v.valueList||[])[v.value]??v.value; }
+      else { const i=el('input',{type:v.type==='string'?'text':'number',value:v.value,step:'any'}); ctl=el('div',{class:'ctl'},i,el('button',{class:'btn',onclick:()=>send(v.type==='string'?i.value:+i.value)},'Setzen')); show=v.value+(v.unit?' '+v.unit:''); }
+      card.append(el('div',{class:'row'},el('div',{class:'grow'},el('div',{class:'t'},v.name),el('div',{class:'s'},`${show} · ${v.type} · ID ${v.id} · ${v.timestamp}`)),ctl));
+    }
+    box.append(card);
+  }catch(e){box.innerHTML='';box.append(el('div',{class:'err'},e.message))}
+}
+
+// ---------- Programme ----------
+async function loadPrograms(){
+  const box=$('#prlist'); box.textContent='Lade …';
+  try{
+    const list=await api('/api/programs'); box.innerHTML='';
+    const card=el('div',{class:'card'});
+    for (const p of list){
+      const i=el('input',{type:'checkbox'}); i.checked=p.active;
+      i.onchange=async()=>{try{await api('/api/programs/'+p.id,{method:'PUT',body:JSON.stringify({active:i.checked})});toast(p.name+(i.checked?' aktiv':' inaktiv'))}catch(e){toast('Fehler: '+e.message)}};
+      card.append(el('div',{class:'row'},el('div',{class:'grow'},el('div',{class:'t'},p.name),el('div',{class:'s'},`ID ${p.id} · zuletzt ${p.lastExecute}`)),
+        el('label',{class:'sw',title:'aktiv'},i,el('span')),
+        el('button',{class:'btn',onclick:async()=>{try{await api('/api/programs/'+p.id+'/run',{method:'POST'});toast(p.name+' gestartet')}catch(e){toast('Fehler: '+e.message)}}},'▶')));
+    }
+    box.append(card);
+  }catch(e){box.innerHTML='';box.append(el('div',{class:'err'},e.message))}
+}
+
+// ---------- Live ----------
+function startEvents(){
+  if (es) es.close();
+  es = new EventSource('/api/events?apikey='+encodeURIComponent(KEY));
+  es.onmessage = ev => {
+    const e = JSON.parse(ev.data);
+    const f=$('#lq').value.toUpperCase();
+    if (!f || (e.address+' '+e.param).toUpperCase().includes(f)){
+      const list=$('#livelist');
+      list.prepend(el('div',{class:'row'},el('div',{class:'grow'},el('div',{class:'t'},e.param+' = '+JSON.stringify(e.value)),
+        el('div',{class:'s'},new Date(e.ts).toLocaleTimeString()+' · '+e.address+' · '+e.interface))));
+      while (list.children.length>200) list.lastChild.remove();
+    }
+    document.querySelectorAll(`[data-a="${CSS.escape(e.address.toUpperCase())}"][data-p="${CSS.escape(e.param)}"]`).forEach(row=>{
+      row._m.value=e.value; const v=row.querySelector('.val'); if (v) v.textContent=fmt(row._m);
+      const cb=row.querySelector('input[type=checkbox]'); if (cb) cb.checked=!!e.value;
+      row.classList.remove('flash'); void row.offsetWidth; row.classList.add('flash');
+    });
+  };
+}
+$('#lclear').onclick=()=>$('#livelist').innerHTML='';
+
+// ---------- Info ----------
+async function loadInfo(){
+  try{
+    const i=await api('/api/info');
+    const box=$('#info'); box.innerHTML='';
+    box.append(el('div',{class:'t'},'HM-REST '+i.version+' · läuft seit '+i.uptime));
+    for (const f of i.interfaces) box.append(el('div',{class:'s'},`${f.available?'🟢':'🔴'} ${f.name} ${f.url||''} · ${f.devices} Geräte ${f.error?'· '+f.error:''}`));
+    box.append(el('div',{class:'s'},'ReGa: '+(i.rega||'nicht erreichbar')+(i.readOnly?' · Nur-Lesen':'')));
+  }catch(e){$('#info').textContent=e.message}
+  const h=location.origin;
+  $('#examples').textContent=
+`# Alle Geräte mit Werten
+curl -H "X-API-Key: <KEY>" "${h}/api/devices?values=1"
+
+# Einen Wert lesen
+curl -H "X-API-Key: <KEY>" ${h}/api/devices/<ADRESSE>:1/values/LEVEL
+
+# Schalten / dimmen
+curl -X PUT -H "X-API-Key: <KEY>" -d '{"value":true}' ${h}/api/devices/<ADRESSE>:3/values/STATE
+curl -X PUT -H "X-API-Key: <KEY>" -d '{"value":0.5}'  ${h}/api/devices/<ADRESSE>:4/values/LEVEL
+
+# Systemvariable setzen
+curl -X PUT -H "X-API-Key: <KEY>" -d '{"value":"anwesend"}' ${h}/api/sysvars/Anwesenheit
+
+# Live-Events
+curl -N "${h}/api/events?apikey=<KEY>"`;
+}
+
+async function init(){
+  $('#showkey').value=KEY;
+  try{ const i=await api('/api/info'); $('#ver').textContent='v'+i.version; }
+  catch(e){ if (KEY) toast(e.message); return; }
+  $('#setup').classList.add('hide'); $('#login').classList.add('hide');
+  loadDevices(); startEvents();
+}
+// Seite ist schon offen und es kommt ein neuer Aufruf aus der CCU (nur der #-Teil ändert sich)
+window.addEventListener('hashchange',()=>{ if (/sid=/.test(location.hash)) location.reload(); });
+(async()=>{
+  // Aufruf aus der CCU-WebUI: #sid=@…@ → Key mit der Sitzung abholen.
+  // Danach wird die Sitzung sofort aus der Adresse entfernt.
+  const ms = location.hash.match(/sid=(?:@|%40)?([0-9A-Za-z]{10})/);
+  if (ms) history.replaceState(null,'',location.pathname);
+  let st={keySet:true};
+  try{ st=await (await fetch('/setup/status',{cache:'no-store'})).json(); }catch(e){}
+  if (st.noAuth){ init(); return; }
+  if (ms){
+    try{ await applyKey(await keyFromSession('@'+ms[1]+'@'),'Über die CCU angemeldet'); return; }
+    catch(e){ toast(e.message); }
+  }
+  if (!st.keySet){ try{localStorage.removeItem('hmrest-key');}catch(e){} KEY=''; $('#setup').classList.remove('hide'); return; }
+  if (!KEY) showLogin(); else init();
+})();
+</script>
+</body>
+</html>

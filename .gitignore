@@ -1,0 +1,7 @@
+dist/
+*.tar.gz
+/hmrest
+/hmrest.exe
+config.json
+*.log
+.DS_Store
