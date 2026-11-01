@@ -41,3 +41,10 @@ Gegenstück: Home-Assistant-Integration im Repo `vcontag/hmrest-homeassistant` (
 ## Auf der CCU
 - Installiert unter `/usr/local/addons/hmrest`, Log `/var/log/hmrest.log`, Port 8099 (Firewall-Freigabe nötig)
 - Diagnose: *Einstellungen → Systemsteuerung → HM-REST → Diagnose* (Start/Stopp, Log, Ports, neuer API-Key)
+
+## Releases
+- Ein Release entsteht automatisch, wenn auf `main` eine Versionsnummer landet, für die es noch kein Release gibt
+  (Job `release` in `.github/workflows/ci.yml`, nur nach grünen Tests).
+- Für ein neues Release: Version erhöhen (`var version` in `main.go`) **und** oben in `CHANGELOG.md` einen Abschnitt `## <Version>`
+  ergänzen – der wird als Release-Beschreibung übernommen. Ohne Versionssprung passiert nichts.
+- Das Paket (`hmrest-<version>.tar.gz`) hängt am Release unter *Releases* auf GitHub.

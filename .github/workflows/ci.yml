@@ -18,3 +18,37 @@ jobs:
         with:
           name: hmrest-addon
           path: dist/*.tar.gz
+
+  release:
+    # Nur auf main und nur wenn die Tests grün sind. Legt v<version> an, falls es das Release noch nicht gibt.
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: hmrest-addon
+          path: dist
+      - name: Version ermitteln
+        id: v
+        run: echo "version=$(sed -n 's/^var version = "\(.*\)"/\1/p' main.go)" >> "$GITHUB_OUTPUT"
+      - name: Release anlegen (nur bei neuer Version)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          V: ${{ steps.v.outputs.version }}
+        run: |
+          if gh release view "v$V" >/dev/null 2>&1; then
+            echo "Release v$V existiert bereits – nichts zu tun."; exit 0
+          fi
+          awk -v v="$V" '/^## /{p=($2==v); next} p' CHANGELOG.md > notes.md
+          [ -s notes.md ] || echo "HM-REST $V" > notes.md
+          cat >> notes.md <<'TXT'
+
+          ### Installation
+          `hmrest-*.tar.gz` herunterladen und in der CCU-WebUI unter *Einstellungen → Systemsteuerung → Zusatzsoftware*
+          hochladen. Konfiguration und API-Key bleiben bei Updates erhalten.
+          TXT
+          gh release create "v$V" dist/*.tar.gz --title "HM-REST $V" --notes-file notes.md --target "$GITHUB_SHA"

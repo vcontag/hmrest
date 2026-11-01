@@ -5,7 +5,7 @@ BidCos-Wired und virtuellen Geräten sowie Systemvariablen, Programme, Räume un
 über eine JSON-REST-API bereit. Wertänderungen kommen live per Server-Sent Events.
 
 ## Installation
-1. `hmrest-1.0.0.tar.gz` in der WebUI unter *Einstellungen → Systemsteuerung → Zusatzsoftware* hochladen und installieren.
+1. `hmrest-<version>.tar.gz` (unter *Releases*) in der WebUI unter *Einstellungen → Systemsteuerung → Zusatzsoftware* hochladen und installieren.
 2. Firewall: *Einstellungen → Systemsteuerung → Firewall* → Port-Freigabe `8099`.
 3. API-Key auslesen: `cat /usr/local/addons/hmrest/etc/config.json` (wird beim ersten Start erzeugt).
 4. Oberfläche: `http://<CCU>:8099/`
@@ -73,3 +73,6 @@ curl -X PUT -H "X-API-Key: KEY" -H "Content-Type: application/json" \
 - Tage: `MONDAY` … `SUNDAY`, `WORKDAYS`, `WEEKEND`, `ALL` (auch kommagetrennt, auch deutsch); Einzeltage überschreiben Gruppen.
 - Temperaturen werden auf 0,5 °C gerundet und gegen den Gerätebereich geprüft.
 - Alle Tage gehen in **einem** `putParamset` ans Gerät (schont den Duty Cycle).
+
+## Änderungen
+Siehe [CHANGELOG.md](CHANGELOG.md). Fertige Pakete gibt es unter *Releases*.
