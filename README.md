@@ -76,3 +76,6 @@ curl -X PUT -H "X-API-Key: KEY" -H "Content-Type: application/json" \
 
 ## Änderungen
 Siehe [CHANGELOG.md](CHANGELOG.md). Fertige Pakete gibt es unter *Releases*.
+
+## Lizenz
+[MIT](LICENSE)
