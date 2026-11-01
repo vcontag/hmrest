@@ -19,6 +19,7 @@ else
   echo "<p class='bad'>● Das Add-on läuft nicht.</p>"
 fi
 cat <<EOF
+<p id="upd" style="display:none" class="ok"></p>
 <p><a class="b g" href="diagnose.cgi?${SIDQ}">Diagnose / Add-on starten</a></p>
 <p class="s" id="fw" style="display:none">🔴 Port 8099 ist von diesem Rechner aus nicht erreichbar.
 Unter <i>Einstellungen → Systemsteuerung → Firewall</i> bei „Port-Freigabe" <code>8099</code> eintragen.</p>
@@ -27,6 +28,23 @@ Unter <i>Einstellungen → Systemsteuerung → Firewall</i> bei „Port-Freigabe
 var u = 'http://' + location.hostname + ':8099/';
 // Sitzung nur im #-Teil weitergeben (wird nicht an Server/Proxys gesendet)
 document.getElementById('go').href = u + '#sid=@${SID}@';
+// Neue Version auf GitHub?
+function newer(a, b) { // a > b ?
+  var x = String(a).split('.'), y = String(b).split('.');
+  for (var i = 0; i < Math.max(x.length, y.length); i++) {
+    var p = parseInt(x[i] || 0, 10), q = parseInt(y[i] || 0, 10);
+    if (p !== q) return p > q;
+  }
+  return false;
+}
+fetch('update-check.cgi?cmd=json').then(function (r) { return r.json(); }).then(function (j) {
+  if (j.latest && j.latest !== 'n/a' && newer(j.latest, j.installed)) {
+    var e = document.getElementById('upd');
+    e.innerHTML = '⬆ Neue Version <b>' + j.latest + '</b> verfügbar (installiert: ' + j.installed + '). ' +
+      '<a href="' + j.url + '" target="_blank" rel="noopener">Herunterladen</a> und unter <i>Zusatzsoftware</i> einspielen.';
+    e.style.display = 'block';
+  }
+}).catch(function () {});
 fetch(u + 'setup/status', {mode: 'no-cors'}).catch(function () {
   document.getElementById('fw').style.display = 'block';
 });

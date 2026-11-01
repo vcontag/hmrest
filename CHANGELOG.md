@@ -3,6 +3,11 @@
 Neue Einträge oben. Die Überschrift `## <Version>` muss zu `var version` in `main.go` passen –
 der Abschnitt wird beim Release automatisch als Beschreibung übernommen.
 
+## 1.6.1
+- Update-Anzeige: Die CCU-WebUI zeigt unter *Zusatzsoftware* an, wenn auf GitHub eine neuere Version vorliegt
+  (Abfrage höchstens einmal pro Stunde). Die HM-REST-Kachelseite zeigt den Hinweis mit Download-Link ebenfalls.
+- Erstes Release über GitHub – diese Version einmal einspielen, danach werden Updates automatisch gemeldet.
+
 ## 1.6.0
 - Wochenprogramme von Heizungsthermostaten (HM-CC-RT-DN, HM-TC-IT-WM-W-EU, HmIP): neue Schnittstelle
   `GET/PUT /api/devices/{adresse}/weekprogram`, Format (mit/ohne Profile P1–P3) wird automatisch erkannt.

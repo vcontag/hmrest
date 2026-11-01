@@ -72,6 +72,7 @@ case "$1" in
     echo "Version: ${VERSION}"
     echo "Operations: uninstall restart"
     echo "Config-Url: /addons/${ADDONNAME}/index.cgi"
+    echo "Update: /addons/${ADDONNAME}/update-check.cgi"
     ;;
   uninstall)
     do_stop
