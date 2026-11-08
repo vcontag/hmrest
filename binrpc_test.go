@@ -79,6 +79,7 @@ type fakeCUxD struct {
 	lastSet []interface{}
 	initURL string
 	initID  string
+	inits   []initCall
 }
 
 func newFakeCUxD(t *testing.T) *fakeCUxD {
@@ -138,9 +139,11 @@ func (f *fakeCUxD) handle(c net.Conn) {
 		}
 	case "init":
 		f.initURL = params[0].(string)
+		f.initID = ""
 		if len(params) > 1 {
 			f.initID = params[1].(string)
 		}
+		f.inits = append(f.inits, initCall{f.initURL, f.initID, time.Now()})
 	default:
 		var pl bytes.Buffer
 		binEncodeValue(&pl, map[string]interface{}{"faultCode": int64(-1), "faultString": "unknown method"})

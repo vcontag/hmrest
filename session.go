@@ -40,6 +40,7 @@ func NewSessionChecker(jsonURLs []string, rega *Rega) *SessionChecker {
 	tr := http.DefaultTransport.(*http.Transport).Clone()
 	// nur für 127.0.0.1: Die CCU nutzt ein selbstsigniertes Zertifikat
 	tr.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+	tr.MaxIdleConnsPerHost, tr.IdleConnTimeout = 2, 30*time.Second
 	return &SessionChecker{
 		jsonURLs: jsonURLs, rega: rega, valid: map[string]time.Time{},
 		http: &http.Client{
@@ -88,7 +89,7 @@ func (s *SessionChecker) viaJSON(sid string) bool {
 			Result interface{} `json:"result"`
 		}
 		err = json.NewDecoder(resp.Body).Decode(&r)
-		resp.Body.Close()
+		drainClose(resp.Body)
 		if err != nil {
 			continue
 		}

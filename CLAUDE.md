@@ -17,8 +17,10 @@ Gegenstück: Home-Assistant-Integration im Repo `vcontag/hmrest-homeassistant` (
 - `binrpc.go` – BIN-RPC (CUxD auf Port 8701 spricht NUR BIN-RPC) inkl. Callback-Server
 - `ccu.go` – Schnittstellen (BidCos-RF, HmIP-RF, BidCos-Wired, VirtualDevices, CUxD), Geräteindex, Paramset-Zugriff,
   Typwandlung `convertValue` (Schreiben) und `normValue` (Lesen/Events: z.B. `""` bei FLOAT wird verworfen)
-- `events.go` – `init()`-Anmeldung bei den Schnittstellen, Callback-Empfang (XML-RPC 9126, BIN-RPC 9127),
-  Worker-Queue → `Hub` → SSE `/api/events`
+- `callback.go` – `init()`-Anmeldung bei den Schnittstellen (feste ID `hmrest-<Name>`, nur einmal beim Start,
+  Watchdog ping/PONG mit Backoff, Abmeldung `init(url, "")` beim Beenden), Callback-Empfang (XML-RPC 9126,
+  BIN-RPC 9127), Worker-Queue
+- `events.go` – `Hub` → SSE `/api/events`
 - `rega.go` – HomeMatic-Script über rega.exe: Namen/Räume/Gewerke, Systemvariablen, Programme
 - `session.go` – Prüfung der WebUI-Sitzung (`Session.renewSession` über JSON-API, Fallback ReGa)
 - `weekprogram.go` – Wochenprogramme von Thermostaten (Format-Erkennung `P1_ENDTIME_MONDAY_1` / `ENDTIME_MONDAY_1`)
@@ -30,6 +32,8 @@ Gegenstück: Home-Assistant-Integration im Repo `vcontag/hmrest-homeassistant` (
 
 ## Regeln / Stolperfallen
 - Keine externen Go-Abhängigkeiten – das Binary muss auf CCU2/CCU3/RaspberryMatic laufen.
+- `init` nie häufiger als nötig aufrufen: Der HMIPServer legt je `init` einen HTTP-Client an und gibt ihn erst
+  beim Abmelden frei (FD-Leck, Watchdog `hmipserver-highfd`). Kein init pro Request, SSE-Client oder Reload.
 - Callbacks der CCU nie synchron mit RPC-Aufrufen an dieselbe Schnittstelle beantworten (Deadlock-Gefahr, v.a. CUxD) –
   daher die Event-Queue.
 - MASTER-Schreibzugriffe kosten Duty Cycle: immer gebündelt in einem `putParamset`.

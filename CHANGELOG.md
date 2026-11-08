@@ -3,6 +3,24 @@
 Neue Einträge oben. Die Überschrift `## <Version>` muss zu `var version` in `main.go` passen –
 der Abschnitt wird beim Release automatisch als Beschreibung übernommen.
 
+## 1.7.0
+- **Behebt ein File-Descriptor-Leck im HMIPServer der CCU** (Watchdog `hmipserver-highfd`): HM-REST hat sich bisher
+  alle 10 Minuten neu bei jeder Schnittstelle angemeldet, und der HMIPServer legt für jede Anmeldung einen
+  neuen internen HTTP-Client an, den er nie freigibt.
+- Anmeldung (`init`) jetzt nur noch einmal beim Start je Schnittstelle (HmIP-RF, BidCos-RF, BidCos-Wired,
+  VirtualDevices, CUxD), mit fester ID `hmrest-<Schnittstelle>` – auch über Neustarts gleich.
+- Neue Anmeldung nur noch bei echtem Verbindungsverlust: Nach `reinitMinutes` ohne Event wird per `ping`
+  geprüft, erst wenn kein PONG kommt, folgt ein neues `init` – mit Backoff (1, 2, 5, 10 Minuten) und je
+  Schnittstelle nie mehrere gleichzeitig. Schnittstellen ohne `ping` (z.B. CUxD) werden über ihre
+  Erreichbarkeit überwacht und nur nach einem Ausfall neu angemeldet.
+- Sauberes Abmelden beim Beenden (`init` mit leerer ID, alle Schnittstellen parallel). Das Stopp-Skript
+  wartet jetzt bis zu 20 Sekunden, bevor es den Prozess hart beendet.
+- Callback-Ports werden geöffnet, bevor die Anmeldung erfolgt; Callbacks werden sofort beantwortet.
+- Eigene XML-RPC-Aufrufe nutzen einen gemeinsamen HTTP-Client mit begrenztem Keep-Alive, Antworten werden
+  immer vollständig gelesen und geschlossen.
+- Diagnose: Jede Anmeldung steht mit Grund im Log; `/api/info` zeigt je Schnittstelle `initCalls`
+  (zusätzlich unter `events`: Interface-ID, Callback-URL, Grund und Zeitpunkt der letzten Anmeldung, pings).
+
 ## 1.6.1
 - Update-Anzeige: Die CCU-WebUI zeigt unter *Zusatzsoftware* an, wenn auf GitHub eine neuere Version vorliegt
   (Abfrage höchstens einmal pro Stunde). Die HM-REST-Kachelseite zeigt den Hinweis mit Download-Link ebenfalls.

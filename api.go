@@ -322,6 +322,9 @@ func (a *API) info(w http.ResponseWriter, r *http.Request) {
 	for _, i := range a.ccu.Interfaces() {
 		s := i.Status()
 		s["devices"] = counts[i.Name]
+		if a.cb != nil {
+			s["initCalls"] = a.cb.InitCalls(i.Name)
+		}
 		ifs = append(ifs, s)
 	}
 	out := map[string]interface{}{

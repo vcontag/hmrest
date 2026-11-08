@@ -22,7 +22,7 @@ import (
 	"time"
 )
 
-var version = "1.6.1"
+var version = "1.7.0"
 
 //go:embed web/index.html
 var webFS embed.FS
@@ -39,7 +39,7 @@ type Config struct {
 	CallbackURL    string            `json:"callbackUrl"`
 	BinCallback    string            `json:"binCallbackListen"`
 	BinCallbackURL string            `json:"binCallbackUrl"`
-	ReinitMinutes  int               `json:"reinitMinutes"`
+	ReinitMinutes  int               `json:"reinitMinutes"` // Ruhezeit ohne Event (min), danach ping; init erst, wenn kein PONG kommt
 	RegaURLs       []string          `json:"regaUrls"`
 	SessionURLs    []string          `json:"sessionUrls"`
 	Interfaces     []InterfaceConfig `json:"interfaces"`
@@ -220,11 +220,13 @@ func main() {
 	if !cfg.DisableEvents {
 		api.cb = NewCallback(ccu, hub, cfg.CallbackListen, cfg.CallbackURL, time.Duration(cfg.ReinitMinutes)*time.Minute)
 		api.cb.SetBin(cfg.BinCallback, cfg.BinCallbackURL)
-		go api.cb.ListenAndServe()
-		go func() {
-			time.Sleep(2 * time.Second) // Callback-Server zuerst starten
-			api.cb.Run(ctx)
-		}()
+		// Erst die Callback-Ports öffnen, dann anmelden – sonst ruft die CCU eine tote URL auf.
+		if err := api.cb.Listen(); err != nil {
+			log.Printf("%v – keine Anmeldung für Live-Events", err)
+		} else {
+			go api.cb.Serve()
+			go api.cb.Run(ctx)
+		}
 	}
 
 	srv := &http.Server{Addr: cfg.Listen, Handler: api.Middleware(api.Routes()), ReadHeaderTimeout: 10 * time.Second}
@@ -238,7 +240,8 @@ func main() {
 	<-ctx.Done()
 	log.Printf("Beende …")
 	if api.cb != nil {
-		api.cb.Deregister()
+		// Abmelden (init mit leerer ID), damit die CCU ihre Client-Ressourcen freigibt.
+		api.cb.Deregister(8 * time.Second)
 	}
 	hub.Close()
 	sctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)

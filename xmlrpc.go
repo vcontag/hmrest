@@ -6,12 +6,14 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"encoding/xml"
 	"errors"
 	"fmt"
 	"io"
 	"math"
+	"net"
 	"net/http"
 	"sort"
 	"strconv"
@@ -378,13 +380,33 @@ func writeResponse(w io.Writer, v interface{}) error {
 
 // ---------- Client ----------
 
+// rpcHTTP ist der eine HTTP-Client für alle XML-RPC-Aufrufe: Verbindungen werden
+// wiederverwendet, Keep-Alive ist auf wenige, kurz ruhende Verbindungen begrenzt.
+// Die Zeitgrenze kommt je Aufruf über den Context.
+var rpcHTTP = &http.Client{Transport: &http.Transport{
+	DialContext:         (&net.Dialer{Timeout: 5 * time.Second, KeepAlive: 30 * time.Second}).DialContext,
+	MaxIdleConns:        16,
+	MaxIdleConnsPerHost: 2,
+	MaxConnsPerHost:     8,
+	IdleConnTimeout:     30 * time.Second,
+	DisableCompression:  true,
+}}
+
+// drainClose liest einen Rest der Antwort (damit die Verbindung wiederverwendet
+// werden kann) und schließt den Body.
+func drainClose(rc io.ReadCloser) {
+	_, _ = io.Copy(io.Discard, io.LimitReader(rc, 64<<10))
+	_ = rc.Close()
+}
+
 type XMLRPCClient struct {
-	URL  string
-	HTTP *http.Client
+	URL     string
+	HTTP    *http.Client
+	timeout time.Duration
 }
 
 func NewXMLRPCClient(url string, timeout time.Duration) *XMLRPCClient {
-	return &XMLRPCClient{URL: url, HTTP: &http.Client{Timeout: timeout}}
+	return &XMLRPCClient{URL: url, HTTP: rpcHTTP, timeout: timeout}
 }
 
 func (c *XMLRPCClient) Endpoint() string { return c.URL }
@@ -403,7 +425,13 @@ func (c *XMLRPCClient) Call(method string, params ...interface{}) (interface{}, 
 	}
 	b.WriteString("</params></methodCall>")
 
-	req, err := http.NewRequest("POST", c.URL, bytes.NewReader(utf8ToLatin1(b.Bytes())))
+	ctx := context.Background()
+	if c.timeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, c.timeout)
+		defer cancel()
+	}
+	req, err := http.NewRequestWithContext(ctx, "POST", c.URL, bytes.NewReader(utf8ToLatin1(b.Bytes())))
 	if err != nil {
 		return nil, err
 	}
@@ -412,7 +440,7 @@ func (c *XMLRPCClient) Call(method string, params ...interface{}) (interface{}, 
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer drainClose(resp.Body)
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(io.LimitReader(resp.Body, 512))
 		return nil, fmt.Errorf("HTTP %d von %s: %s", resp.StatusCode, c.URL, strings.TrimSpace(string(body)))
