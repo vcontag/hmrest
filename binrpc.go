@@ -403,6 +403,10 @@ func ServeBinRPC(listen string, dispatch func(string, []interface{}) interface{}
 	if err != nil {
 		return err
 	}
+	return serveBinRPC(ln, dispatch)
+}
+
+func serveBinRPC(ln net.Listener, dispatch func(string, []interface{}) interface{}) error {
 	var wg sync.WaitGroup
 	for {
 		conn, err := ln.Accept()

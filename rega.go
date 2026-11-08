@@ -26,7 +26,8 @@ type Rega struct {
 }
 
 func NewRega(urls []string) *Rega {
-	return &Rega{urls: urls, http: &http.Client{Timeout: 30 * time.Second}}
+	tr := &http.Transport{MaxIdleConnsPerHost: 2, IdleConnTimeout: 30 * time.Second, DisableCompression: true}
+	return &Rega{urls: urls, http: &http.Client{Timeout: 30 * time.Second, Transport: tr}}
 }
 
 func (r *Rega) URL() string { r.mu.Lock(); defer r.mu.Unlock(); return r.url }
@@ -47,7 +48,7 @@ func (r *Rega) Run(script string) (string, error) {
 			continue
 		}
 		data, err := io.ReadAll(resp.Body)
-		resp.Body.Close()
+		drainClose(resp.Body)
 		if err != nil {
 			lastErr = err
 			continue

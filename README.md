@@ -60,6 +60,14 @@ curl -N "http://ccu:8099/api/events?apikey=KEY"
 `interfaces` (URLs je Schnittstelle, erste erreichbare wird genutzt), `regaUrls`.
 Nach Änderungen: Add-on in der WebUI neu starten.
 
+### Live-Events: Anmeldung bei der CCU
+HM-REST meldet sich beim Start **einmal** je Schnittstelle mit einer festen ID an (`init`, z.B. `hmrest-HmIP-RF`)
+und beim Beenden wieder ab (`init` mit leerer ID). Kommt `reinitMinutes` lang (Standard 10) kein Event, wird
+die Verbindung per `ping` geprüft. Erst wenn auch das PONG ausbleibt, folgt eine neue Anmeldung –
+mit wachsendem Abstand (1, 2, 5, 10 Minuten). Zähler und Grund der letzten Anmeldung stehen in `/api/info`
+unter `events` (`initCalls`, `lastInitReason`), jede Anmeldung zusätzlich im Log.
+`callbackUrl`/`binCallbackUrl` müssen zur Adresse in `callbackListen`/`binCallbackListen` passen.
+
 Hinweis: MASTER-Werte schreiben überträgt Konfiguration ans Gerät (Duty Cycle, bei Batteriegeräten erst beim nächsten Aufwachen).
 
 ## Bauen
